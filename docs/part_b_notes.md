@@ -1,0 +1,17 @@
+### B.10 Written answers
+
+**Choice of K.** The inertia curve drops steeply from K=2 to K=4 (1820.8 -> 1268.2 -> 743.1) and then flattens (617.4 at K=5, 503.2 at K=6), so the elbow is at K=4, and K=4 also has the highest silhouette (0.526 versus 0.480 for K=5). I chose **K=4**: it is the best on both metrics and gives four segments (436 / 138 / 419 / 182) that the business can act on, whereas K=5 only splits an existing group.
+
+**Why inertia alone cannot pick K.** Inertia is the sum of squared distances to the nearest centroid, so adding clusters can never increase it - K=8 (366.5) is always below K=2 (1820.8), and K=n (every point its own cluster) would reach 0. Because it falls with K by construction, it must be read for the *bend* (elbow) together with the silhouette score and business usefulness, not for its minimum.
+
+**Cluster ids are labels only.** The numbers 0-3 carry no order or ranking; K-means may number the same groups differently with another seed. The Premium flag therefore follows the segment with the highest mean monetary value (segment 1: mean monetary INR 7,129.70, 138 customers), not a cluster number.
+
+**Model choice.** Random forest was selected because it had the higher cross-validated F1 (0.681 versus 0.651) and a slightly higher test F1 (0.655 versus 0.648, 58 of 89 lapsing customers caught in both). Missing a lapsing customer means a lost customer and all their future orders, while wrongly targeting a loyal customer only costs one coupon or message, so recall on the lapsed class matters more than precision; both models reach about 0.65 recall, and the forest is not worse on either metric and needs no separate threshold tuning. Both clear the F1 >= 0.55 requirement.
+
+**Class-balance result.** Over-sampling the lapsed class in the training set moved **recall** the most (0.652 -> 0.854), while precision fell (0.644 -> 0.589) and F1 rose to 0.697. For the retention team this means they would reach about one in five more lapsing customers at the price of contacting more customers who would have stayed anyway - acceptable when a campaign message is cheap.
+
+**Feature readings.** Random forest top-5: frequency (0.280) and monetary (0.271) dominate - customers who order often and spend more are far less likely to stop; recency (0.115) says how long they have already been silent; average delivery time (0.061) and cancellation rate (0.052) hint that bad service experiences push customers away. Logistic regression coefficients (standardised): **frequency is strongly negative (-1.70)** - more orders, less lapse; **monetary is positive (+0.28)** - once frequency is controlled for, higher spend per order goes with slightly more lapse (high-ticket buyers order rarely); **recency is slightly positive (+0.04)** - a longer silence raises lapse risk, but weakly once frequency is in the model.
+
+**Leakage statement.** No encoder, scaler or resampler saw any test row: the pipeline is fitted on the 924 training rows only (inside `GridSearchCV` each fold fits its own copy) and over-sampling is applied to the training rows only. No order dated 2025-09-01 or later entered any feature, and the segment labels from task 3 were not used as features.
+
+**Retention list caveat.** The retention list is illustrative and not a leakage-free evaluation, because the Premium flag comes from whole-window RFM that includes the September lapse window (it is a post-hoc label). Only 1 of the 10 listed Premium customers actually lapsed, which is consistent with Premium customers rarely lapsing at all.

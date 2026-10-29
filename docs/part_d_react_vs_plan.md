@@ -1,0 +1,7 @@
+### D.9 ReAct versus plan-and-execute
+
+My ReAct agent asks the model before every action: S1 needed 5 model calls (1,102 tokens), S4 4 calls (769), S5 3 calls (460), S6 2 calls (154) and the looping S7 6 calls (3,246). Every call re-sends the whole message history, including the policy passages, so tokens grow with each step. A plan-and-execute design asks once for the full step list (get_order, search_policy, calculate_refund, issue_refund) and runs it without further model calls, so a normal refund would need about 2 calls (plan plus final answer) and clearly fewer tokens; this is my estimate, not a measurement.
+
+The difference shows on unexpected observations. In ReAct the model sees `order not found` (S6) or a cancelled order (S5) and stops after 2 or 3 calls, because the next step is chosen with the new information. A fixed plan would first run the remaining steps against a missing or cancelled order and fail or wrongly compute a refund, and only then replan, costing an extra call and risking a bad action.
+
+For this refund workflow I would choose ReAct, with the three safety limits kept (6 iterations, token limit, timeout). The workflow is short, its refund tools change money and each step depends on the previous result (status decides whether to calculate, the amount decides between issuing and escalating), so deciding step by step is safer than saving a few thousand tokens. Plan-and-execute becomes attractive only if volumes grow and the tool sequence stays stable.
